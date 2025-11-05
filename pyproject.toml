@@ -1,0 +1,19 @@
+[project]
+name = "filemetrix"
+version = "0.2.0-dev"
+description = "Behind every file is a Metrix. Harvest, identify, and register file-level metadata at scale."
+readme = "README.md"
+title = "FileMetrix Service"
+requires-python = ">=3.12.8"
+dependencies = [
+    "akmi-utils>=0.1.6.2",
+    "asyncio>=3.4.3",
+    "datahugger",
+    "dynaconf>=3.2.11",
+    "psycopg2-binary>=2.9.10",
+    "requests>=2.32.4",
+    "sickle>=0.7.0",
+    "sqlmodel>=0.0.24",
+]
+[tool.uv.sources]
+datahugger = { git = "https://github.com/ekoi/datahugger.git", rev = "pid-fetcher" }

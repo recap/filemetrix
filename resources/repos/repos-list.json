@@ -1,0 +1,42 @@
+[
+  {
+    "name": "DANS Physical and Technical Sciences",
+    "url": "https://phys-techsciences.datastations.nl/oai",
+    "metadata_prefix": "oai_dc",
+    "metadata_format": "XML"
+  },
+  {
+    "name": "DANS Life Sciences",
+    "url": "https://lifesciences.datastations.nl/oai",
+    "metadata_prefix": "oai_dc",
+    "metadata_format": "XML"
+  },
+  {
+    "name": "DANS Social Sciences Data Station",
+    "url": "https://ssh.datastations.nl/oai",
+    "metadata_prefix": "oai_dc",
+    "metadata_format": "XML"
+  },
+  {
+    "name": "DANS Archaeology Data Station",
+    "url": "https://archaeology.datastations.nl/oai",
+    "metadata_prefix": "oai_dc",
+    "metadata_format": "XML"
+  },
+  {
+    "name": "Dataverse NL",
+    "url": "https://dataverse.nl/oai",
+    "metadata_prefix": "oai_dc",
+    "metadata_format": "XML"
+  },
+  {
+    "name": "Swissubase",
+    "url": "https://www.swissubase.ch/oai-pmh/v1/oai",
+    "metadata_prefix": "oai_dc",
+    "metadata_format": "XML"
+  },
+  {
+    "name": "SRCE Dabar",
+    "url": "https://dabar.srce.hr/oai",
+    "metadata_prefix": "oai_dc",
+    "meta
