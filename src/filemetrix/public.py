@@ -22,6 +22,7 @@ from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.responses import Response
 
+from src.filemetrix import onedata_hugger
 from src.filemetrix.commons import app_settings
 from src.filemetrix.db import RepositoryModel, insert_repo, get_repo_by_id, get_repo_by_prefix_and_url, get_all_repos, \
     HarvestStatus, get_dataset_count_grouped_by_publication_month, get_file_metadata_count_grouped_by_repo, get_dataset_count_grouped_by_repo
@@ -431,16 +432,19 @@ async def get_pid(pid: str):
         metadata = await asyncio.to_thread(datahugger.info, decoded_doi, {"type": "file"})
         # metadata =datahugger.info(decoded_doi)
     except RepositoryNotSupportedError as e:
-        duration = time.perf_counter() - start_time
-        if duration > 30:
-            logging.warning(f"Request duration exceeded 30 seconds: {duration:.4f} seconds")
-            print(f"WARNING: Request duration exceeded 30 seconds: {duration:.4f} seconds")
-        logging.error(f"Repository not supported: {e}")
-        logging.info(f"Request duration: {duration:.4f} seconds")
-        return JSONResponse(
-            status_code=400,
-            content={"error": "Repository not supported", "message": str(e), "duration": duration}
-        )
+        # fall-back and try to resolve the identifier as Onedata dataset
+        metadata = onedata_hugger.info(decoded_doi)
+        if not metadata:
+            duration = time.perf_counter() - start_time
+            if duration > 30:
+                logging.warning(f"Request duration exceeded 30 seconds: {duration:.4f} seconds")
+                print(f"WARNING: Request duration exceeded 30 seconds: {duration:.4f} seconds")
+            logging.error(f"Repository not supported: {e}")
+            logging.info(f"Request duration: {duration:.4f} seconds")
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Repository not supported", "message": str(e), "duration": duration}
+            )
     except Exception as e:
         duration = time.perf_counter() - start_time
         if duration > 30:
