@@ -20,4 +20,5 @@ mail_use_auth = false
 mail_from = "no-reply@filemetrix.com"
 mail_to = ["eko.indarto@dans.knaw.nl"]
 
-api_preix = "/api/v1"
+api_prefix = "/api/v1"
+reload_service = true

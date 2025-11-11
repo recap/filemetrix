@@ -1,6 +1,6 @@
+import asyncio
 import logging
 
-import asyncio
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import JSONResponse
 
@@ -13,7 +13,7 @@ from src.filemetrix.services.oai_harvester_client import OaiHarvesterClient
 router = APIRouter(prefix=API_PREFIX)
 
 
-@router.post("/add-repo", tags=["Protected"])
+@router.post("/add-repo", tags=["Repo Management"])
 async def add_repo(
     request: Request):# Validate Bearer token
     try:
@@ -51,8 +51,8 @@ async def add_repo(
         )
 from fastapi import BackgroundTasks
 
-@router.post("/harvest/{metadata_prefix}/{url:path}", tags=["Protected"])
-@router.post("/harvest/{repo_id}", tags=["Protected"])
+@router.post("/harvest/{metadata_prefix}/{url:path}", tags=["Repo Management"])
+@router.post("/harvest/{repo_id}", tags=["Repo Management"])
 async def pid_harvest(
     request: Request,
     background_tasks: BackgroundTasks,
@@ -103,8 +103,8 @@ async def pid_harvest(
     )
 from fastapi import BackgroundTasks
 
-@router.post("/harvest-filemetadata/{metadata_prefix}/{url:path}", tags=["Protected"])
-@router.post("/harvest-filemetadata/{repo_id}", tags=["Protected"])
+@router.post("/harvest-filemetadata/{metadata_prefix}/{url:path}", tags=["Repo Management"])
+@router.post("/harvest-filemetadata/{repo_id}", tags=["Repo Management"])
 async def filemetadata_harvest(
     request: Request,
     background_tasks: BackgroundTasks,

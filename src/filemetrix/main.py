@@ -5,7 +5,7 @@ from datetime import datetime
 
 import asyncio
 
-from src.filemetrix.api.v1 import protected, public
+from src.filemetrix.api.v1 import repo_workflow_controller, repo_discovery, repo_metrics, pid_fetcher
 from src.filemetrix.infra.commons import app_settings, send_mail
 from src.filemetrix.infra.db import ensure_database_exists, create_tables
 
@@ -31,6 +31,8 @@ from starlette.middleware.cors import CORSMiddleware
 APP_NAME = os.environ.get("APP_NAME", "Filemetrix Service")
 EXPOSE_PORT = os.environ.get("EXPOSE_PORT", 1966)
 OTLP_GRPC_ENDPOINT = os.environ.get("OTLP_GRPC_ENDPOINT", "http://localhost:4317")
+
+RELOAD_ENABLE = os.environ.get("RELOAD_ENABLE", "false").lower() == "true"
 
 
 api_keys = [app_settings.FILEMETRIX_SERVICE_API_KEY]
@@ -96,11 +98,32 @@ async def lifespan(application: FastAPI):
 
 
 build_date = os.environ.get("BUILD_DATE", "unknown")
+
+tags_metadata = [
+    {
+        "name": "PID Fetcher",
+        "description": "Fetching Persistent Identifiers (PIDs) for resources",
+    },
+    {
+        "name": "Repo Discovery",
+        "description": "Discovering repositories and their metadata",
+    },
+    {
+        "name": "Repo Metrics",
+        "description": "Querying metrics and statistics about harvested data",
+    },
+    {
+        "name": "Repo Management",
+        "description": "Managing repository workflows and operations",
+    },
+
+]
 app = FastAPI(
     title=project_details['title'],
     description=project_details['description'],
     version=f"{project_details['version']} (Build Date: {build_date})",
-    lifespan=lifespan
+    lifespan=lifespan,
+    openapi_tags=tags_metadata,
 )
 
 @app.exception_handler(StarletteHTTPException)
@@ -117,10 +140,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(pid_fetcher.router, tags=["PID Fetcher"], prefix="")
+app.include_router(repo_discovery.router, tags=["Repo Discovery"], prefix="")
 
-app.include_router(protected.router, tags=["Protected"], prefix="", dependencies=[Depends(auth_header)])
+app.include_router(repo_metrics.router, tags=["Repo Metrics"], prefix="")
 
-app.include_router(public.router, tags=["Public"], prefix="")
+app.include_router(repo_workflow_controller.router, tags=["Repo Management"], prefix="", dependencies=[Depends(auth_header)])
+
 
 @app.get("/", include_in_schema=False)
 async def root():
@@ -137,10 +163,10 @@ async def root():
 
 if __name__ == "__main__":
     uvicorn.run(
-        "main:app",
+        f"{__name__}:app",
         host="0.0.0.0",
         port=int(EXPOSE_PORT),
         workers=1,
         factory=False,
-        reload=True,
+        reload=RELOAD_ENABLE,
     )
