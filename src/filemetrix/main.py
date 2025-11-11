@@ -5,11 +5,9 @@ from datetime import datetime
 
 import asyncio
 
-from src.filemetrix import protected, public
-from src.filemetrix.commons import app_settings, send_gmail
-from src.filemetrix.db import ensure_database_exists, create_tables, RepositoryModel, insert_repo, get_repo_by_id, \
-    get_repo_by_prefix_and_url, get_all_repos, get_dataset_count_grouped_by_publication_month
-from src.filemetrix.oai_harvester_client import OaiHarvesterClient
+from src.filemetrix.api.v1 import protected, public
+from src.filemetrix.infra.commons import app_settings, send_mail
+from src.filemetrix.infra.db import ensure_database_exists, create_tables
 
 # Add the src directory to the Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
@@ -51,9 +49,9 @@ def auth_header(
 
 
 project_details = a_commons.get_project_details(
-    os.getenv("BASE_DIR"), ["name", "version", "description", "title"]
+    base_dir=os.getenv("BASE_DIR"),
+    keys=["name", "version", "description", "title"],
 )
-
 
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -88,11 +86,11 @@ async def lifespan(application: FastAPI):
     try:
         ensure_database_exists()
         create_tables()
-        send_gmail(subject_success, body_success)
+        send_mail(subject_success, body_success)
         yield
     except Exception as e:
         error_body = f"FileMetrix Service failed to start on {datetime.now().isoformat()} with error: {str(e)}. Version: {project_details['version']}, Build Date: {build_date}."
-        send_gmail(subject_error, error_body)
+        send_mail(subject_error, error_body)
         logging.error(f"Startup error: {e}")
         raise
 
@@ -138,4 +136,11 @@ async def root():
     )
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=EXPOSE_PORT)
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=int(EXPOSE_PORT),
+        workers=1,
+        factory=False,
+        reload=True,
+    )

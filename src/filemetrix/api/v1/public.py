@@ -22,19 +22,17 @@ from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.responses import Response
 
-from src.filemetrix import onedata_hugger
-from src.filemetrix.commons import app_settings
-from src.filemetrix.db import RepositoryModel, insert_repo, get_repo_by_id, get_repo_by_prefix_and_url, get_all_repos, \
-    HarvestStatus, get_dataset_count_grouped_by_publication_month, get_file_metadata_count_grouped_by_repo, get_dataset_count_grouped_by_repo
-from src.filemetrix.oai_harvester_client import OaiHarvesterClient
-from src.filemetrix.db import get_file_metadata_count_by_repo_id
-from src.filemetrix.db import get_dataset_count
-from src.filemetrix.db import get_file_metadata_count
-from src.filemetrix.db import get_dataset_count_by_repo_id
-from src.filemetrix.db import get_dataset_count_by_repo_id_and_status
+from src.filemetrix.infra.commons import app_settings, API_PREFIX
+from src.filemetrix.infra.db import get_repo_by_id, get_repo_by_prefix_and_url, get_all_repos, get_dataset_count, \
+    get_file_metadata_count, get_dataset_count_by_repo_id, get_file_metadata_count_by_repo_id, \
+    get_dataset_count_by_repo_id_and_status, HarvestStatus, get_dataset_count_by_repo_id_and_fm_status, \
+    get_file_metadata_count_grouped_by_mime_type, get_file_metadata_count_grouped_by_mime_type_by_repo_id, \
+    get_total_file_size_by_repo_id, get_dataset_count_grouped_by_publication_month, get_dataset_count_grouped_by_repo, \
+    get_file_metadata_count_grouped_by_repo, get_total_file_size_grouped_by_repo
+from src.filemetrix.services import onedata_hugger
 
-# Create an API router instance
-router = APIRouter()
+router = APIRouter(prefix=API_PREFIX)
+
 
 
 def serialize(obj):
@@ -145,7 +143,6 @@ async def dataset_count_by_repo_id_and_status(repo_id: int, harvest_status: Harv
         content={"datasets": count, "repo-name": repo.name}
     )
 
-from src.filemetrix.db import get_dataset_count_by_repo_id_and_fm_status
 
 @router.get("/dataset/count/{repo_id}/file-metadata/{harvest_status}", tags=["Public"])
 async def dataset_count_by_repo_id_and_fm_status(repo_id: int, harvest_status: HarvestStatus):
@@ -163,8 +160,6 @@ async def dataset_count_by_repo_id_and_fm_status(repo_id: int, harvest_status: H
         content={"dataset-count": count, "repo-name": repo.name}
     )
 
-from src.filemetrix.db import get_file_metadata_count_grouped_by_mime_type
-
 @router.get("/file-metadata/count/grouped/mime_type", tags=["Public"])
 async def file_metadata_count_grouped_by_mime_type():
     result = get_file_metadata_count_grouped_by_mime_type()
@@ -173,7 +168,6 @@ async def file_metadata_count_grouped_by_mime_type():
         content=result
     )
 
-from src.filemetrix.db import get_file_metadata_count_grouped_by_mime_type_by_repo_id
 
 @router.get("/file-metadata/count/grouped/mime_type/{repo_id}", tags=["Public"])
 async def file_metadata_count_grouped_by_mime_type_by_repo_id(repo_id: int):
@@ -183,7 +177,6 @@ async def file_metadata_count_grouped_by_mime_type_by_repo_id(repo_id: int):
         content=result
     )
 
-from src.filemetrix.db import get_total_file_size_by_repo_id
 
 def format_size(size_bytes: int) -> str:
     units = [("T", 1024 ** 4), ("Gb", 1024 ** 3), ("Mb", 1024 ** 2), ("Kb", 1024), ("byte", 1)]
@@ -235,10 +228,6 @@ async def file_metadata_count_grouped_by_repo():
     )
 
 
-from src.filemetrix.db import get_total_file_size_grouped_by_repo
-
-from src.filemetrix.db import get_total_file_size_grouped_by_repo
-
 @router.get("/file-metadata/total-size/grouped/repo", tags=["Public"])
 async def file_metadata_total_size_grouped_by_repo():
     result = get_total_file_size_grouped_by_repo()
@@ -246,9 +235,6 @@ async def file_metadata_total_size_grouped_by_repo():
         status_code=200,
         content=result
     )
-
-from src.filemetrix.db import get_repo_by_dataset_pid
-
 
 
 @router.get("/repositories", tags=["Public - PID Fetcher"])

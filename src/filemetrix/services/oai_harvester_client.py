@@ -8,10 +8,10 @@ import requests
 
 from sickle import Sickle
 
-from src.filemetrix.commons import send_gmail, app_settings
-from src.filemetrix.db import FileMetaDataModel, DatasetModel, insert_dataset, get_repo_by_prefix_and_url, \
-    update_repository_harvest_info, RepositoryModel, insert_file_metadata, \
-    update_dataset_harvest_fm_end_completed, update_dataset_harvest_fm_start_in_progress, dataset_exists
+from src.filemetrix.infra.commons import send_mail, app_settings
+from src.filemetrix.infra.db import RepositoryModel, update_repository_harvest_info, dataset_exists, DatasetModel, \
+    insert_dataset, update_dataset_harvest_fm_start_in_progress, FileMetaDataModel, insert_file_metadata, \
+    update_dataset_harvest_fm_end_completed
 
 
 def transform_input(transformer_url, str_tobe_transformed):
@@ -104,7 +104,7 @@ class OaiHarvesterClient():
                 f"Total Dataset records processed: {total_processed}\nTotal Dataset records skipped: {total_skipped}\n"
                 f"Total Dataset records inserted: {total_inserted}")
 
-        send_gmail(subject, body)
+        send_mail(subject, body)
         return total_processed
 
     async def harvest_files(self, repo_id: int, pid: str, pid_fetcher_url: str = "https://pid-fetcher.labs.dansdemo.nl/") -> int| None:
@@ -121,7 +121,7 @@ class OaiHarvesterClient():
             logging.error(f"Request for {pid} timed out.")
             subject = "FileMetrix Harvest Timeout"
             body = f"Request for {pid} timed out while fetching metadata files from repository {repo_id}."
-            send_gmail(subject, body)
+            send_mail(subject, body)
             return None
 
         if files_metadata.status_code != 200:

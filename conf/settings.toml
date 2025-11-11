@@ -6,3 +6,18 @@ log_level = 10
 log_format = "%(asctime)s %(levelname)s %(name)s %(threadName)s : %(message)s"
 PID_FETCHER_URL = "http://localhost:1928/"
 PKL_TOKEN_FILE = "@format {env[BASE_DIR]}/conf/token.pkl"
+
+DB_USER="fms"
+DB_HOST="localhost"
+DB_PORT=5432
+
+MAIL_USR = ""
+mail_host = "localhost"
+mail_port = 1025
+mail_use_tls = false
+mail_use_ssl = false
+mail_use_auth = false
+mail_from = "no-reply@filemetrix.com"
+mail_to = ["eko.indarto@dans.knaw.nl"]
+
+api_preix = "/api/v1"

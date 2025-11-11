@@ -11,7 +11,7 @@ from sqlmodel import SQLModel, Field, Relationship
 from sqlmodel import create_engine, Session
 from sqlalchemy.orm import selectinload
 
-from src.filemetrix.commons import app_settings
+from src.filemetrix.infra.commons import app_settings
 
 dbname = "filemetrix"
 

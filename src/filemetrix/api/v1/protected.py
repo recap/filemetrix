@@ -4,13 +4,13 @@ import asyncio
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import JSONResponse
 
-from src.filemetrix.commons import app_settings, send_gmail
-from src.filemetrix.db import RepositoryModel, insert_repo, get_repo_by_id, get_repo_by_prefix_and_url, HarvestStatus, \
-    delete_file_metadata_by_dataset_pid
-from src.filemetrix.oai_harvester_client import OaiHarvesterClient
+from src.filemetrix.infra.commons import send_mail, app_settings, API_PREFIX
+from src.filemetrix.infra.db import RepositoryModel, insert_repo, get_repo_by_id, get_repo_by_prefix_and_url, \
+    HarvestStatus, delete_file_metadata_by_dataset_pid
+from src.filemetrix.services.oai_harvester_client import OaiHarvesterClient
 
 # Create an API router instance
-router = APIRouter()
+router = APIRouter(prefix=API_PREFIX)
 
 
 @router.post("/add-repo", tags=["Protected"])
@@ -88,7 +88,7 @@ async def pid_harvest(
     logging.info(f"Processing harvest PID, repo name: {repo.name}")
     subject = f"Dataset harvest for repository {repo.name} started"
     body = f"Dataset harvest for repository {repo.name} has started. Please check the status later."
-    send_gmail(subject, body)
+    send_mail(subject, body)
     def run_harvest_sync():
         async def run_harvest():
             harvester = OaiHarvesterClient(repo)
@@ -140,7 +140,7 @@ async def filemetadata_harvest(
     print(f"Processing filemetadata: {repo.name}")
     subject = f"File metadata harvest for repository {repo.name} started"
     body = f"File metadata harvest for repository {repo.name} has started. Please check the status later."
-    send_gmail(subject, body)
+    send_mail(subject, body)
     def run_harvest_sync():
         async def run_harvest():
             logging.info(f"Starting file metadata harvest for repository: {repo.name}")
@@ -163,7 +163,7 @@ async def filemetadata_harvest(
             print(f"File metadata harvest completed for repository: {repo.name}")
             subject = f"File metadata harvest for repository {repo.name} completed"
             body = f"File metadata harvest for repository {repo.name} has completed successfully."
-            send_gmail(subject, body)
+            send_mail(subject, body)
         asyncio.run(run_harvest())
 
     background_tasks.add_task(run_harvest_sync)
