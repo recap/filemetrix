@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
 
   maildev:
@@ -14,7 +12,7 @@ services:
     container_name: postgres
     environment:
       - POSTGRES_USER=fms
-      - POSTGRES_PASSWORD=your_secure_password
+      - POSTGRES_PASSWORD=my_secret_password
       - POSTGRES_DB=filemetrix
     ports:
       - "5432:5432"
@@ -22,6 +20,45 @@ services:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U acp" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  filemetrix:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    #image: ekoindarto/filemetrix:latest
+    container_name: filemetrix
+    ports:
+      - "1966:1966"
+    environment:
+      - DB_USER=fms
+      - DB_PASSWORD=my_secret_password
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=filemetrix
+      - MAIL_HOST=maildev
+      - MAIL_PORT=1025
+      - MAIL_FROM=e.indarto@gmail.com
+      - MAIL_TO=eko.indarto@dans.knaw.nl
+      - MAIL_USE_TLS=0
+      - MAIL_SEND_RETRIES=5
+      - MAIL_SEND_INTERVAL=2
+      - EXPOSE_PORT=1966
+      - BUILD_DATE=${BUILD_DATE:-unknown}
+      - FILEMETRIX_SERVICE_API_KEY=${FILEMETRIX_SERVICE_API_KEY:-changeme}
+      - SKIP_ENV_VALIDATION=1
+    depends_on:
+      - postgres
+      - maildev
+    volumes:
+      - ./conf:/home/akmi/fms/conf:ro
+      - ./logs:/home/akmi/fms/logs
+      - ./src:/home/akmi/fms/src:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "PGPASSWORD=${DB_PASSWORD} psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} -c 'SELECT 1' > /dev/null 2>&1 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5

@@ -9,7 +9,7 @@ ENV BUILD_DATE=$BUILD_DATE
 RUN apt-get update -y && \
     apt-get upgrade -y && \
     apt-get dist-upgrade -y && \
-    apt-get install -y --no-install-recommends git curl && \
+    apt-get install -y --no-install-recommends git curl postgresql-client && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -33,6 +33,8 @@ ENV APP_NAME="Filemetrix Service"
 ENV PATH="/home/akmi/fms/.venv/bin:$PATH"
 # Copy the application into the container.
 COPY src ./src
+# Copy the env validator script into the image
+COPY src/filemetrix/validate_env.py ./src/filemetrix/validate_env.py
 #Temporary, will be removed later
 #COPY conf ./conf
 COPY pyproject.toml .
@@ -46,7 +48,7 @@ RUN uv venv .venv
 RUN uv sync --frozen --no-cache && chown -R akmi:akmi ${BASE_DIR}
 USER akmi
 RUN mkdir logs
-# Run the application.
-CMD ["python", "-m", "src.filemetrix.main"]
+# Run the application. Validate env before starting the app.
+CMD ["/bin/sh", "-c", "/home/akmi/fms/.venv/bin/python /home/akmi/fms/src/filemetrix/validate_env.py && /home/akmi/fms/.venv/bin/python -m src.filemetrix.main"]
 
 #CMD ["tail", "-f", "/dev/null"]
