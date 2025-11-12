@@ -4,6 +4,8 @@ from typing import Optional, List
 from datetime import datetime
 
 import psycopg2
+from psycopg2 import OperationalError
+import os
 from sqlalchemy import Column, Integer, BigInteger
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql.schema import UniqueConstraint
@@ -13,33 +15,55 @@ from sqlalchemy.orm import selectinload
 
 from src.filemetrix.infra.commons import app_settings
 
-dbname = "filemetrix"
+# Read DB config with fallbacks to environment variables.
+# Use app_settings.get() to avoid AttributeError when keys are missing.
+dbname = app_settings.get("DB_NAME") or os.environ.get("DB_NAME") or "filemetrix"
+password = app_settings.get("DB_PASSWORD") or os.environ.get("DB_PASSWORD") or ""
+host = app_settings.get("DB_HOST") or os.environ.get("DB_HOST") or "localhost"
+port = app_settings.get("DB_PORT") or os.environ.get("DB_PORT") or 5432
+user = app_settings.get("DB_USER") or os.environ.get("DB_USER") or "postgres"
+
+# Ensure port is an int
+try:
+    port = int(port)
+except (TypeError, ValueError):
+    logging.warning("DB_PORT is not an integer, falling back to 5432")
+    port = 5432
 
 
-password = app_settings.DB_PASSWORD
-host = app_settings.DB_HOST
-port = app_settings.DB_PORT
-user = app_settings.DB_USER
 DB_URL = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{dbname}"
 engine = create_engine(DB_URL, echo=False)
 
-def ensure_database_exists():
 
-    # Connect to the default database
-    conn = psycopg2.connect(
-        dbname="postgres",
-        user=user,
-        password=password,
-        host=host,
-        port=port
-    )
-    conn.autocommit = True
-    with conn.cursor() as cur:
-        cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (dbname,))
-        exists = cur.fetchone()
-        if not exists:
-            cur.execute(f'CREATE DATABASE "{dbname}"')
-    conn.close()
+def ensure_database_exists() -> bool:
+    """Try to connect to the Postgres server and create the target database if missing.
+
+    Returns True if the check (and create) succeeded or the database already exists.
+    Returns False if any operational error occurs (connection/auth failure)."""
+    try:
+        # Connect to the default database
+        conn = psycopg2.connect(
+            dbname="postgres",
+            user=user,
+            password=password,
+            host=host,
+            port=port
+        )
+        conn.autocommit = True
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (dbname,))
+            exists = cur.fetchone()
+            if not exists:
+                cur.execute(f'CREATE DATABASE "{dbname}"')
+        conn.close()
+        return True
+    except OperationalError as oe:
+        logging.warning("Could not connect to Postgres to ensure database exists: %s", oe)
+        return False
+    except Exception as e:
+        logging.error("Unexpected error when ensuring database exists: %s", e)
+        return False
+
 
 class HarvestStatus(str, Enum):
     IN_PROGRESS = "in_progress"
@@ -103,8 +127,17 @@ class FileMetaDataModel(SQLModel, table=True):
     dataset: Optional["DatasetModel"] = Relationship(back_populates="files")
 
 
-def create_tables():
-    SQLModel.metadata.create_all(engine, checkfirst=True)
+def create_tables() -> bool:
+    """Attempt to create tables. Return True on success, False on failure."""
+    try:
+        SQLModel.metadata.create_all(engine, checkfirst=True)
+        return True
+    except OperationalError as oe:
+        logging.warning("Could not create tables because Postgres is unreachable: %s", oe)
+        return False
+    except Exception as e:
+        logging.error("Unexpected error while creating tables: %s", e)
+        return False
 
 
 def insert_repo(repo: RepositoryModel):

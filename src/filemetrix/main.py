@@ -5,7 +5,7 @@ from datetime import datetime
 
 import asyncio
 
-from src.filemetrix.api.v1 import repo_workflow_controller, repo_discovery, repo_metrics, pid_fetcher
+from src.filemetrix.api.v1 import repo_workflow_controller, repo_discovery, repo_metrics, pid_fetcher, health
 from src.filemetrix.infra.commons import app_settings, send_mail
 from src.filemetrix.infra.db import ensure_database_exists, create_tables
 
@@ -86,16 +86,42 @@ async def lifespan(application: FastAPI):
     body_success = f"FileMetrix Service started successfully on {datetime.now().isoformat()}. Version: {project_details['version']}, Build Date: {build_date}."
     subject_error = "FileMetrix Service Startup Error"
     try:
-        ensure_database_exists()
-        create_tables()
-        send_mail(subject_success, body_success)
-        yield
-    except Exception as e:
-        error_body = f"FileMetrix Service failed to start on {datetime.now().isoformat()} with error: {str(e)}. Version: {project_details['version']}, Build Date: {build_date}."
-        send_mail(subject_error, error_body)
-        logging.error(f"Startup error: {e}")
-        raise
+        db_ready = ensure_database_exists()
+        if not db_ready:
+            logging.warning("Database is not reachable; starting in degraded mode (DB operations will fail until the DB is available).")
+        else:
+            created = create_tables()
+            if not created:
+                logging.warning("Could not create tables; continuing startup (tables may be created later).")
 
+        # Attempt to send startup email but don't fail the app if email sending fails
+        try:
+            # Only attempt sending if at least one mail recipient or host is configured
+            mail_to = app_settings.get("mail_to") or os.environ.get("MAIL_TO")
+            mail_host = app_settings.get("mail_host") or os.environ.get("MAIL_HOST")
+            if mail_to and mail_host:
+                send_mail(subject_success, body_success)
+            else:
+                logging.info("Skipping startup email because mail settings are not configured.")
+        except Exception as mail_exc:
+            logging.warning(f"Failed to send startup email: {mail_exc}")
+
+        # yield to start the app even if the DB isn't ready
+        yield
+
+    except Exception as e:
+        # Try to send an error email but do not prevent the app from starting in dev mode
+        try:
+            error_body = f"FileMetrix Service failed to start on {datetime.now().isoformat()} with error: {str(e)}. Version: {project_details['version']}, Build Date: {build_date}."
+            mail_to = app_settings.get("mail_to") or os.environ.get("MAIL_TO")
+            mail_host = app_settings.get("mail_host") or os.environ.get("MAIL_HOST")
+            if mail_to and mail_host:
+                send_mail(subject_error, error_body)
+        except Exception:
+            logging.exception("Failed to send startup error email")
+        logging.error(f"Startup error (non-fatal in dev): {e}")
+        # Do not re-raise: allow the application to continue starting in degraded mode
+        yield
 
 build_date = os.environ.get("BUILD_DATE", "unknown")
 
@@ -116,7 +142,10 @@ tags_metadata = [
         "name": "Repo Management",
         "description": "Managing repository workflows and operations",
     },
-
+    {
+        "name": "Health",
+        "description": "Service health checks",
+    },
 ]
 app = FastAPI(
     title=project_details['title'],
@@ -142,6 +171,9 @@ app.add_middleware(
 )
 app.include_router(pid_fetcher.router, tags=["PID Fetcher"], prefix="")
 app.include_router(repo_discovery.router, tags=["Repo Discovery"], prefix="")
+
+# Health check router (simple DB connectivity check)
+app.include_router(health.router, tags=["Health"], prefix="")
 
 app.include_router(repo_metrics.router, tags=["Repo Metrics"], prefix="")
 
