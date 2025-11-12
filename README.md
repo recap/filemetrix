@@ -106,7 +106,37 @@ Prerequisites:
 - Python 3.12+
 - A PostgreSQL instance (local, Docker, or remote) or use Docker Compose below
 
-Create and activate a virtual environment and install dependencies:
+Install and prepare environment (using `uv` package manager described below) or use standard venv/pip:
+
+- Installing `uv` (the minimal steps):
+
+  - Install via pip (works on Linux/macOS/Windows):
+
+  ```bash
+  pip install --user uv
+  # or, if you use a virtualenv (recommended):
+  pip install uv
+  ```
+
+  - macOS (Homebrew) option — install Python via Homebrew then install `uv` with pip:
+
+  ```bash
+  # install Python if you don't already have it via Homebrew
+  brew install python
+  # then install uv 
+  brew search uv
+  brew info uv
+  brew install uv
+  ```
+
+- With `uv`:
+
+```bash
+uv venv .venv
+uv sync --frozen --no-cache
+```
+
+- Standard venv/pip alternative:
 
 ```bash
 python -m venv .venv
