@@ -229,7 +229,7 @@ See the repository `LICENSE` file for license terms.
 
 ## Architecture (high level)
 
-Intercation of main components and external sources.
+Intereraction of components and data flow:
 
 ```mermaid
 flowchart TB
