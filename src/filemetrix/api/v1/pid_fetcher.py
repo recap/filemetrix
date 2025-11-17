@@ -26,6 +26,12 @@ router = APIRouter(prefix=API_PREFIX)
 # - /{pid:path} (main PID fetcher)
 
 
+# This endpoint retrieves repository information for a given PID
+# and fetches OAI data if available from the repository. It uses re3data
+# to find the repository based on the publisher extracted from the PID (DOI).
+# It then transforms the re3data XML response to JSON and attempts to fetch OAI metadata.
+# If OAI data is found, it extracts the title, identifier, and collections. 
+# If no OAI data is available, it returns basic repository information.
 @router.get("/repository-info/{pid:path}",tags=["PID Fetcher"],
     summary="Retrieve repository information for a given PID",
     description="Fetches repository information from re3data based on the provided persistent identifier (PID).")

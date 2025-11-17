@@ -103,6 +103,7 @@ For local development the repository includes `.env.example` (copy to `.env`) an
 ## Quick start — Development
 
 Prerequisites:
+
 - Python 3.12+
 - A PostgreSQL instance (local, Docker, or remote) or use Docker Compose below
 
@@ -123,7 +124,7 @@ Install and prepare environment (using `uv` package manager described below) or 
   ```bash
   # install Python if you don't already have it via Homebrew
   brew install python
-  # then install uv 
+  # then install uv
   brew search uv
   brew info uv
   brew install uv
@@ -177,6 +178,7 @@ docker-compose logs -f filemetrix
 Open MailDev UI to inspect sent emails: http://localhost:1080
 
 Notes:
+
 - `filemetrix` container runs a small prestart validation (`src/filemetrix/validate_env.py`) — the compose setup uses `SKIP_ENV_VALIDATION=1` for local developer convenience but you should unset this for stricter validation in staging/production.
 - The Compose file configures a healthcheck for the `filemetrix` container that verifies DB connectivity using `psql` (the `Dockerfile` installs the `postgresql-client`).
 
@@ -227,10 +229,10 @@ See the repository `LICENSE` file for license terms.
 
 ## Architecture (high level)
 
-A simple ASCII diagram showing the main components and data flows:
+Intercation of main components and external sources.
 
-```
-  TODO: add diagram
+```mermaid:ARCHITECTURE.mmd
+
 ```
 
 - The `FileMetrix` service harvests dataset identifiers via OAI-PMH and stores datasets and file metadata in PostgreSQL. It uses external PID fetcher services and transformer services (configurable) to collect file-level metadata.
@@ -241,31 +243,31 @@ A simple ASCII diagram showing the main components and data flows:
 
 All example calls assume the service runs on `http://localhost:1966` and `API_PREFIX` is `/api/v1` (default).
 
-1) List discovered repositories (re3data cache)
+1. List discovered repositories (re3data cache)
 
 ```bash
 curl -sS http://localhost:1966/api/v1/repositories | jq '.'
 ```
 
-2) Fetch repository details (List Sets) from re3data by r3id
+2. Fetch repository details (List Sets) from re3data by r3id
 
 ```bash
 curl -sS http://localhost:1966/api/v1/repository-collections/<r3id> | jq '.'
 ```
 
-3) PID fetcher: retrieve repository info for a PID
+3. PID fetcher: retrieve repository info for a PID
 
 ```bash
 curl -sS http://localhost:1966/api/v1/repository-info/doi:10.1234/abcd | jq '.'
 ```
 
-4) PID fetcher: fetch metadata files for a PID
+4. PID fetcher: fetch metadata files for a PID
 
 ```bash
 curl -sS http://localhost:1966/api/v1/doi:10.1234/abcd | jq '.'
 ```
 
-5) Add a repository (protected route — ensure you include authorization in protected endpoints)
+5. Add a repository (protected route — ensure you include authorization in protected endpoints)
 
 ```bash
 curl -X POST http://localhost:1966/api/v1/add-repo \
@@ -273,25 +275,25 @@ curl -X POST http://localhost:1966/api/v1/add-repo \
   -d '{"name": "Example repo", "url": "http://example.org/oai", "metadata_prefix": "oai_dc"}'
 ```
 
-6) Trigger a dataset harvest by repo id
+6. Trigger a dataset harvest by repo id
 
 ```bash
 curl -X POST http://localhost:1966/api/v1/harvest/1
 ```
 
-7) Repo metrics: list repositories
+7. Repo metrics: list repositories
 
 ```bash
 curl -sS http://localhost:1966/api/v1/repos | jq '.'
 ```
 
-8) Repo metrics: dataset count
+8. Repo metrics: dataset count
 
 ```bash
 curl -sS http://localhost:1966/api/v1/dataset/count | jq '.'
 ```
 
-9) Health endpoint
+9. Health endpoint
 
 ```bash
 curl -v http://localhost:1966/health
