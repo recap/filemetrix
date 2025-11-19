@@ -232,93 +232,55 @@ See the repository `LICENSE` file for license terms.
 Intereraction of components and data flow:
 
 ```mermaid
-flowchart TB
+C4Container
 
-%% App & API
-subgraph App["FastAPI Application"]
-direction TB
-Main["main.py
-(app factory)"]
-API["API Layer
-(/api/v1/*)"]
+title FileMetrix – C4 Container Model
 
-    Main --> API
+Person(user, "User", "Developer, operator, or automation calling the API")
 
-end
+System_Boundary(fm, "FileMetrix") {
 
-%% API Routes
-subgraph Routes["API Endpoints"]
-direction LR
-RepoDiscovery["repo_discovery
-(find/register repos)"]
-PIDFetcherEP["pid_fetcher
-(fetch PID metadata)"]
-RepoWorkflow["repo_workflow_controller
-(start harvests)"]
-RepoMetrics["repo_metrics
-(metrics queries)"]
-end
-API --> RepoDiscovery
-API --> PIDFetcherEP
-API --> RepoWorkflow
-API --> RepoMetrics
+    Container(api, "FastAPI Application", "Python / FastAPI", "Exposes REST API endpoints for repository discovery, PID fetching, workflow control, and metrics")
 
-%% External Sources
-subgraph External["External Data Sources"]
-direction TB
-Re3data["re3data API
-(repository registry)"]
-OpenArchives["OAI-PMH Endpoints
-(OpenArchives Data Providers)"]
-PIDResolver["PID Metadata Providers
-(e.g., Handle/DOI resolvers,
-repository APIs)"]
-OneData["OneData / OneProvider
-(file-level metadata)"]
-end
+    ContainerDb(db, "PostgreSQL Database", "PostgreSQL", "Stores repository info, harvested OAI records, file metadata, and derived metrics")
 
-%% Services
-subgraph Services["Service Clients / Integrations"]
-direction TB
-DiscoveryClient["Repository Discovery Logic
-(checks re3data,
-validates OAI endpoints)"]
-OAIClient["OAI-PMH Harvester
-(oai_harvester_client)"]
-PIDClient["PID Fetcher
-(dataset + file metadata)"]
-OneDataClient["OneData Hugger
-(file metadata expansion)"]
-end
+    Container(service_discovery, "Repository Discovery Service", "Python", "Validates repositories, queries re3data, and detects OAI-PMH endpoints")
 
-RepoDiscovery --> DiscoveryClient
-DiscoveryClient --> Re3data
-DiscoveryClient --> OpenArchives
+    Container(service_harvest, "OAI-PMH Harvester", "Python", "Harvests dataset identifiers and metadata from OAI-PMH endpoints")
 
-RepoWorkflow --> OAIClient
-OAIClient --> OpenArchives
+    Container(service_pid, "PID Metadata Fetcher", "Python", "Fetches PID metadata and dataset-level details from external PID resolvers")
 
-PIDFetcherEP --> PIDClient
-PIDClient --> PIDResolver
+    Container(service_onedata, "OneData Metadata Client", "Python", "Fetches fine-grained file-level metadata from OneData/OneProvider")
 
-PIDClient --> OneDataClient
-OneDataClient --> OneData
+    Container(service_metrics, "Metrics Aggregator", "Python", "Computes aggregated metrics from stored metadata")
+}
 
-%% Persistence Layer
-subgraph Persistence["Persistence & Processing"]
-direction TB
-Postgres["PostgreSQL
-(SQLModel models)"]
-Aggregator["Metrics Aggregator
-(MIME types, sizes,
-counts, time-series)"]
-PIDClient --> Postgres
-OAIClient --> Postgres
-OneDataClient --> Postgres
-Postgres --> Aggregator
-Aggregator --> RepoMetrics
-end
+System_Ext(re3, "re3data", "Registry of research data repositories")
+System_Ext(oai, "OAI-PMH Repositories", "OpenArchives-compliant data providers")
+System_Ext(pid_ext, "PID Resolvers", "Handle/DOI resolvers or repository PID services")
+System_Ext(onedata_ext, "OneData / OneProvider", "File-level metadata provider")
 
+Rel(user, api, "Calls API endpoints")
+
+Rel(api, service_discovery, "Starts repository discovery")
+Rel(service_discovery, re3, "Queries registry")
+Rel(service_discovery, oai, "Validates OAI-PMH endpoint")
+
+Rel(api, service_harvest, "Triggers harvest")
+Rel(service_harvest, oai, "Harvests dataset metadata")
+
+Rel(api, service_pid, "Requests PID metadata")
+Rel(service_pid, pid_ext, "Fetches dataset/PID info")
+
+Rel(service_pid, service_onedata, "Requests file-level metadata")
+Rel(service_onedata, onedata_ext, "Fetches metadata")
+
+Rel(service_pid, db, "Stores metadata")
+Rel(service_harvest, db, "")
+Rel(service_onedata, db, "")
+
+Rel(service_metrics, db, "Reads metadata for aggregation")
+Rel(api, service_metrics, "")
 ```
 
 - The `FileMetrix` service harvests dataset identifiers via OAI-PMH and stores datasets and file metadata in PostgreSQL. It uses external PID fetcher services and transformer services (configurable) to collect file-level metadata.
