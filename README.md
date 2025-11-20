@@ -103,6 +103,7 @@ For local development the repository includes `.env.example` (copy to `.env`) an
 ## Quick start — Development
 
 Prerequisites:
+
 - Python 3.12+
 - A PostgreSQL instance (local, Docker, or remote) or use Docker Compose below
 
@@ -123,7 +124,7 @@ Install and prepare environment (using `uv` package manager described below) or 
   ```bash
   # install Python if you don't already have it via Homebrew
   brew install python
-  # then install uv 
+  # then install uv
   brew search uv
   brew info uv
   brew install uv
@@ -177,6 +178,7 @@ docker-compose logs -f filemetrix
 Open MailDev UI to inspect sent emails: http://localhost:1080
 
 Notes:
+
 - `filemetrix` container runs a small prestart validation (`src/filemetrix/validate_env.py`) — the compose setup uses `SKIP_ENV_VALIDATION=1` for local developer convenience but you should unset this for stricter validation in staging/production.
 - The Compose file configures a healthcheck for the `filemetrix` container that verifies DB connectivity using `psql` (the `Dockerfile` installs the `postgresql-client`).
 
@@ -227,10 +229,58 @@ See the repository `LICENSE` file for license terms.
 
 ## Architecture (high level)
 
-A simple ASCII diagram showing the main components and data flows:
+Intereraction of components and data flow:
 
-```
-  TODO: add diagram
+```mermaid
+C4Container
+
+title FileMetrix – C4 Container Model
+
+Person(user, "User", "Developer, operator, or automation calling the API")
+
+System_Boundary(fm, "FileMetrix") {
+
+    Container(api, "FastAPI Application", "Python / FastAPI", "Exposes REST API endpoints for repository discovery, PID fetching, workflow control, and metrics")
+
+    ContainerDb(db, "PostgreSQL Database", "PostgreSQL", "Stores repository info, harvested OAI records, file metadata, and derived metrics")
+
+    Container(service_discovery, "Repository Discovery Service", "Python", "Validates repositories, queries re3data, and detects OAI-PMH endpoints")
+
+    Container(service_harvest, "OAI-PMH Harvester", "Python", "Harvests dataset identifiers and metadata from OAI-PMH endpoints")
+
+    Container(service_pid, "PID Metadata Fetcher", "Python", "Fetches PID metadata and dataset-level details from external PID resolvers")
+
+    Container(service_onedata, "OneData Metadata Client", "Python", "Fetches fine-grained file-level metadata from OneData/OneProvider")
+
+    Container(service_metrics, "Metrics Aggregator", "Python", "Computes aggregated metrics from stored metadata")
+}
+
+System_Ext(re3, "re3data", "Registry of research data repositories")
+System_Ext(oai, "OAI-PMH Repositories", "OpenArchives-compliant data providers")
+System_Ext(pid_ext, "PID Resolvers", "Handle/DOI resolvers or repository PID services")
+System_Ext(onedata_ext, "OneData / OneProvider", "File-level metadata provider")
+
+Rel(user, api, "Calls API endpoints")
+
+Rel(api, service_discovery, "Starts repository discovery")
+Rel(service_discovery, re3, "Queries registry")
+Rel(service_discovery, oai, "Validates OAI-PMH endpoint")
+
+Rel(api, service_harvest, "Triggers harvest")
+Rel(service_harvest, oai, "Harvests dataset metadata")
+
+Rel(api, service_pid, "Requests PID metadata")
+Rel(service_pid, pid_ext, "Fetches dataset/PID info")
+
+Rel(service_pid, service_onedata, "Requests file-level metadata")
+Rel(service_onedata, onedata_ext, "Fetches metadata")
+
+Rel(service_pid, db, "Stores metadata")
+Rel(service_harvest, db, "")
+Rel(service_onedata, db, "")
+
+Rel(service_metrics, db, "Reads metadata for aggregation")
+Rel(api, service_metrics, "")
 ```
 
 - The `FileMetrix` service harvests dataset identifiers via OAI-PMH and stores datasets and file metadata in PostgreSQL. It uses external PID fetcher services and transformer services (configurable) to collect file-level metadata.
@@ -241,31 +291,31 @@ A simple ASCII diagram showing the main components and data flows:
 
 All example calls assume the service runs on `http://localhost:1966` and `API_PREFIX` is `/api/v1` (default).
 
-1) List discovered repositories (re3data cache)
+1. List discovered repositories (re3data cache)
 
 ```bash
 curl -sS http://localhost:1966/api/v1/repositories | jq '.'
 ```
 
-2) Fetch repository details (List Sets) from re3data by r3id
+2. Fetch repository details (List Sets) from re3data by r3id
 
 ```bash
 curl -sS http://localhost:1966/api/v1/repository-collections/<r3id> | jq '.'
 ```
 
-3) PID fetcher: retrieve repository info for a PID
+3. PID fetcher: retrieve repository info for a PID
 
 ```bash
 curl -sS http://localhost:1966/api/v1/repository-info/doi:10.1234/abcd | jq '.'
 ```
 
-4) PID fetcher: fetch metadata files for a PID
+4. PID fetcher: fetch metadata files for a PID
 
 ```bash
 curl -sS http://localhost:1966/api/v1/doi:10.1234/abcd | jq '.'
 ```
 
-5) Add a repository (protected route — ensure you include authorization in protected endpoints)
+5. Add a repository (protected route — ensure you include authorization in protected endpoints)
 
 ```bash
 curl -X POST http://localhost:1966/api/v1/add-repo \
@@ -273,25 +323,25 @@ curl -X POST http://localhost:1966/api/v1/add-repo \
   -d '{"name": "Example repo", "url": "http://example.org/oai", "metadata_prefix": "oai_dc"}'
 ```
 
-6) Trigger a dataset harvest by repo id
+6. Trigger a dataset harvest by repo id
 
 ```bash
 curl -X POST http://localhost:1966/api/v1/harvest/1
 ```
 
-7) Repo metrics: list repositories
+7. Repo metrics: list repositories
 
 ```bash
 curl -sS http://localhost:1966/api/v1/repos | jq '.'
 ```
 
-8) Repo metrics: dataset count
+8. Repo metrics: dataset count
 
 ```bash
 curl -sS http://localhost:1966/api/v1/dataset/count | jq '.'
 ```
 
-9) Health endpoint
+9. Health endpoint
 
 ```bash
 curl -v http://localhost:1966/health
