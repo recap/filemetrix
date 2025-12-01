@@ -16,4 +16,4 @@ dependencies = [
     "sqlmodel>=0.0.24",
 ]
 [tool.uv.sources]
-datahugger = { git = "https://github.com/ekoi/datahugger.git", rev = "pid-fetcher" }
+datahugger = { git = "https://github.com/dans-labs/datahugger.git", rev = "main" }
